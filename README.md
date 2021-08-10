@@ -48,3 +48,8 @@ You are able to change the location of the model file output in the configuratio
  We may add support to other databases based on demand. Please reach out and if you want a specific database supported. Please feel free to contribute commits that add different database vendor support!
 
 If you have any questions you can reach me via email at jon@dontbreakthebuild.com
+
+## Contributing
+
+Follow the instructions provided by this link: 
+https://www.dataschool.io/how-to-contribute-on-github/
