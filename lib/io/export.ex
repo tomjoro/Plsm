@@ -57,6 +57,7 @@ defmodule Plsm.IO.Export do
     output =
       module_declaration(project_name, table.header.name) <>
         model_inclusion() <>
+        schema_prefix(table.header.schema) <>
         primary_key_disable() <>
         schema_declaration(table.header.name)
 
@@ -89,6 +90,10 @@ defmodule Plsm.IO.Export do
   defp module_declaration(project_name, table_name) do
     namespace = Plsm.Database.TableHeader.table_name(table_name)
     "defmodule #{project_name}.#{namespace} do\n"
+  end
+
+  defp schema_prefix(schema) do
+    two_space("@schema_prefix \"#{schema}\"\n" )
   end
 
   defp model_inclusion do

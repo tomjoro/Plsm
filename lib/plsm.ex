@@ -7,6 +7,8 @@ defmodule Mix.Tasks.Plsm do
 
     configs = Plsm.Common.Configs.load_configs()
 
+    IO.puts "******"
+
     configs
     |> Plsm.Database.Common.create()
     |> Plsm.Database.connect()

@@ -4,7 +4,8 @@ defmodule Plsm.Database.PostgreSQL do
             username: "postgres",
             password: "postgres",
             database_name: "db",
-            connection: nil
+            connection: nil,
+            schemas: []
 end
 
 defimpl Plsm.Database, for: Plsm.Database.PostgreSQL do
@@ -15,7 +16,8 @@ defimpl Plsm.Database, for: Plsm.Database.PostgreSQL do
       port: configs.database.port,
       username: configs.database.username,
       password: configs.database.password,
-      database_name: configs.database.database_name
+      database_name: configs.database.database_name,
+      schemas: configs.database.schemas
     }
   end
 
@@ -36,27 +38,37 @@ defimpl Plsm.Database, for: Plsm.Database.PostgreSQL do
       port: db.port,
       username: db.username,
       password: db.password,
-      database_name: db.database_name
+      database_name: db.database_name,
+      schemas: db.schemas
     }
   end
+
+ #[ok: %Postgrex.Result{columns: ["table_name"], command: :select, connection_id: 8232, messages: [], num_rows: 9, rows: [["cash"], ["interest_condition"], ["schedule_line"], ["component"], ["contract"], ["component_type"], ["action_history"], ["receivable"], ["receivable_line"]]}, ok: %Postgrex.Result{columns: ["table_name"], command: :select, connection_id: 8232, messages: [], num_rows: 1, rows: [["custom_field_value"]]}, ok: %Postgrex.Result{columns: ["table_name"], command: :select, connection_id: 8232, messages: [], num_rows: 7, rows: [["fin_event"], ["cost_centre_code"], ["fin_event_type_group"], ["product_code"], ["loan_group_rule"], ["fin_account"], ["fin_entry"]]}, ok: %Postgrex.Result{columns: ["table_name"], command: :select, connection_id: 8232, messages: [], num_rows: 4, rows: [["invoice"], ["contract_notification"], ["gb_indicator"], ["contract"]]}]
+
 
   # pass in a database and then get the tables using the Postgrex query then turn the rows into a table
   @spec get_tables(Plsm.Database.PostgreSQL) :: [Plsm.Database.TableHeader]
   def get_tables(db) do
-    {_, result} =
-      Postgrex.query(
-        db.connection,
-        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';",
-        []
-      )
 
-    result.rows
-    |> List.flatten()
-    |> Enum.map(fn x -> %Plsm.Database.TableHeader{database: db, name: x} end)
+    schema_tables = Enum.map(db.schemas, fn schema ->
+      {_, result} = Postgrex.query(
+        db.connection,
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = '#{schema}';",
+        []
+        )
+      IO.puts "Schema read: #{schema}, found tables: #{result.rows}"
+      {schema, List.flatten(result.rows)}
+    end)
+
+    Enum.map(schema_tables, fn {schema, names} ->
+      Enum.map(names, fn name ->
+        %Plsm.Database.TableHeader{database: db, name: name, schema: schema}
+      end)
+    end) |> List.flatten()
   end
 
-  @spec get_columns(Plsm.Database.PostgreSQL, Plsm.Database.Table) :: [Plsm.Database.Column]
-  def get_columns(db, table) do
+  @spec get_columns(Plsm.Database.PostgreSQL, Plsm.Database.TableHeader) :: [Plsm.Database.Column]
+  def get_columns(db, table_header) do
     {_, result} = Postgrex.query(db.connection, "
           SELECT DISTINCT
             a.attname as column_name,
@@ -67,6 +79,7 @@ defimpl Plsm.Database, for: Plsm.Database.PostgreSQL do
             a.attnum as num
          FROM pg_attribute a
          JOIN pg_class pgc ON pgc.oid = a.attrelid
+         JOIN pg_namespace pgn ON pgn.oid = pgc.relnamespace
          left JOIN (
       	SELECT
       	tc.table_name as table,
@@ -95,9 +108,9 @@ defimpl Plsm.Database, for: Plsm.Database.PostgreSQL do
         LEFT JOIN pg_index i ON
             (pgc.oid = i.indrelid AND i.indkey[0] = a.attnum)
         WHERE a.attnum > 0 AND pgc.oid = a.attrelid
-        AND pg_table_is_visible(pgc.oid)
         AND NOT a.attisdropped
-        AND pgc.relname = '#{table.name}'
+        AND pgc.relname = '#{table_header.name}'
+        AND pgn.nspname = '#{table_header.schema}'
         ORDER BY a.attname;", [])
 
     result.rows
@@ -111,13 +124,15 @@ defimpl Plsm.Database, for: Plsm.Database.PostgreSQL do
     {_, foreign_field} = Enum.fetch(row, 4)
     {_, is_pk} = Enum.fetch(row, 2)
 
-    %Plsm.Database.Column{
+    column = %Plsm.Database.Column{
       name: name,
       type: type,
       primary_key: is_pk,
       foreign_table: foreign_table,
       foreign_field: foreign_field
     }
+    IO.inspect column, label: "column:"
+    column
   end
 
   defp get_type(start_type) do

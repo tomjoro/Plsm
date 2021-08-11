@@ -7,7 +7,7 @@ defmodule Plsm.Database.Table do
 end
 
 defmodule Plsm.Database.TableHeader do
-  defstruct name: String, database: nil
+  defstruct name: String, database: nil, schema: String
 
   def table_name(table_name) do
     table_name
