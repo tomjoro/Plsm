@@ -43,9 +43,6 @@ defimpl Plsm.Database, for: Plsm.Database.PostgreSQL do
     }
   end
 
- #[ok: %Postgrex.Result{columns: ["table_name"], command: :select, connection_id: 8232, messages: [], num_rows: 9, rows: [["cash"], ["interest_condition"], ["schedule_line"], ["component"], ["contract"], ["component_type"], ["action_history"], ["receivable"], ["receivable_line"]]}, ok: %Postgrex.Result{columns: ["table_name"], command: :select, connection_id: 8232, messages: [], num_rows: 1, rows: [["custom_field_value"]]}, ok: %Postgrex.Result{columns: ["table_name"], command: :select, connection_id: 8232, messages: [], num_rows: 7, rows: [["fin_event"], ["cost_centre_code"], ["fin_event_type_group"], ["product_code"], ["loan_group_rule"], ["fin_account"], ["fin_entry"]]}, ok: %Postgrex.Result{columns: ["table_name"], command: :select, connection_id: 8232, messages: [], num_rows: 4, rows: [["invoice"], ["contract_notification"], ["gb_indicator"], ["contract"]]}]
-
-
   # pass in a database and then get the tables using the Postgrex query then turn the rows into a table
   @spec get_tables(Plsm.Database.PostgreSQL) :: [Plsm.Database.TableHeader]
   def get_tables(db) do
